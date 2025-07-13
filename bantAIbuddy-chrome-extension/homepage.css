@@ -1,0 +1,292 @@
+/* --- common css found in all pages starts here --- */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Quicksand:wght@300..700&display=swap');
+
+body {
+    width: 280px;
+    height: 385px;
+    background-color: #DDF4FF;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+body.fade-in {
+    opacity: 1;
+}
+
+body.fade-out {
+    opacity: 0;
+}
+
+img {
+    height: 180px;
+}
+
+.highlight {
+    color: #ff66c4;
+}
+
+.title {
+    font-family: 'Fredoka';
+    font-weight: 600;
+    font-size: 26px;
+    text-align: center;
+    height: max-content;
+    margin: 0%;
+    margin-bottom: 15px;
+}
+
+a {
+    text-decoration: none;
+    color: #ff66c4;
+}
+
+button {
+    font-family: 'Fredoka';
+    font-weight: 700;
+    font-size: 19px;
+    background-color: #fffd62;
+    border: none;
+    padding: 2% 6%;
+    border-radius: 12px;
+}
+
+.descVer2 {
+    font-family: 'Quicksand';
+    text-align: center;
+    margin: 1% 6% 2%;
+    color: #b7b4af;
+    font-size: 13px;
+}
+
+.buttonSection {
+    width: 280px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5%;
+    margin: 2% 0%;
+    margin-top: 20px;
+}
+
+.button2 {
+    font-family: 'Fredoka';
+    font-weight: 700;
+    font-size: 28px;
+    background-color: #fffd62;
+    border: 2px solid #fffd62;
+    padding: 2% 13%;
+    border-radius: 12px;
+    margin-top: 10px;
+    margin-bottom: 35px;
+    transition: border 0.25s ease;
+    cursor: pointer;
+}
+
+.button2:hover{
+    border: 2px solid #fa66c1;
+}
+
+.button2:active{
+    opacity: 0.65;
+}
+
+/* --- ends here --- */
+
+
+
+/* --- for homepage/popup.html --- */
+
+#selectWho {
+    margin-top: 10px;
+}
+
+#desc {
+    margin: 2% 3% 3%;
+    font-family: 'Quicksand';
+    font-size: 13px;
+    text-align: center;
+    color: #413f3f;
+}
+
+#question {
+    font-family: 'Quicksand';
+    font-size: 13px;
+    text-align: center;
+    color: #b7b4af;
+    margin: 2% 0% 2%;
+}
+
+
+
+
+/* --- ends here --- */
+
+
+/* --- for link page --- */
+
+#upperSection {
+    margin: 5% 0% 4%;
+}
+
+#linkDesc2 {
+    font-family: 'Quicksand';
+    text-align: center;
+    font-size: 13px;
+    color: #545454;
+    margin: 2% 0% 3%;
+}
+
+.apiKeySection {
+    width: 250px;
+    height: max-content;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10%;
+    margin: 2% 0%;
+    margin-top: -5px;
+}
+
+#emailAddress {
+    border: 1px solid white;
+    font-family: 'Quicksand';
+    width: 230px;
+    height: 22px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    padding: 5px 10px;
+    border-radius: 20px;   
+    transition: border-color 0.2s ease;
+}
+#emailAddress:focus{
+    border-color: #ff66c4;
+    outline: none;
+    border-radius: 20px;
+}
+
+#confirmButton {
+    min-width: 150px;
+    color:#ff66c4;
+    font-family: 'Fredoka';
+    font-weight: 700;
+    font-size: 28px;
+    background-color: #fffd62;
+    margin: 3% 0%;
+    border-radius: 12px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+    border: 2px solid #fffd62;
+    transition: border 0.25s ease;
+}
+#confirmButton:hover{
+    border: 2px solid #fa66c1;
+}
+
+#confirmButton:active{
+    opacity: 0.65;
+}
+
+#successMessage {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.2s ease-in-out;
+    margin: 0;
+    font-family: 'Quicksand';
+    font-size: 16px;
+    color:#029710;
+    width: 200px;
+}
+
+.feedback {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.feedback.visible {
+    opacity: 1;
+}
+
+/* --- ends here --- */
+
+/* --- for intro2ed --- */
+
+#edSection {
+    width: 280px;
+    display: flex;
+    justify-content: center;
+    margin: 6% 0% 1%;
+}
+
+#thisIsEd{
+    margin-bottom: 10px;
+}
+
+/* for activate.html */
+
+.apiKeySection {
+    padding-bottom: 25px;
+}
+
+#middleSection {
+    margin-top: 15px;
+}
+
+.descVer2 {
+    color: #413f3f;
+}
+
+/* loading spinner */
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(185, 13, 114, 0.1);
+    border-top-color: #d84094;
+    border-radius: 50%;
+    animation: spin 1s linear infinite, fadeIn 0.2s ease;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+#spinner-wrapper {
+    position: relative;
+    min-height: 30px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.buttonWrapper {
+    cursor: not-allowed;
+    margin-bottom: 30px;
+}
+
+.unclickableBtn {
+    opacity: 0.65;
+    pointer-events: none;
+    font-family: 'Fredoka';
+    font-weight: 700;
+    font-size: 28px;
+    background-color: #fffd62;
+    border: 2px solid #fffd62;
+    border-radius: 12px;
+    padding: 3px 12px;
+}
+
+
+/* --- ends here --- */

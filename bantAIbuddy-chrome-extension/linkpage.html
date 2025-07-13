@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link rel="stylesheet" href="homepage.css">
+    </head>
+    <body style="padding: 20px 0;">
+        <div id="upperSection">
+            <img src="../assets/ed_2.png"/>
+        </div>
+        <div id="middleSection">
+            <p class="title">Let's <span class="highlight">LINK</span>!</p>
+            <p class="descVer2">Enter an email address to receive alert notifications for blocked messages.</p>
+        </div>
+        <div class="apiKeySection">
+            <input type="text" id="emailAddress" placeholder="Enter email address (e.g., johndoe@xyz.com)"/>
+            <button id="confirmButton">LINK</button>
+
+            <!-- Loading animation here -->
+            <div id="spinner-wrapper">
+                <div class="feedback spinner" id="spinner"></div>
+                <p class="feedback" id="successMessage">Link Successfull!</p>
+            </div>
+
+        </div>
+
+        <script src="linkApiKey.js"></script>
+        <script src="fadeAnimation.js"></script>
+    </body>
+</html>

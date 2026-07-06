@@ -7,7 +7,7 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
-const DEFAULT_BACKEND_URL = 'https://bantai-backend.vercel.app/api/analyze';
+const DEFAULT_BACKEND_URL = 'https://bantaivercel.vercel.app/api/analyze';
 
 function normalizeBackendUrl(rawUrl) {
     if (typeof rawUrl !== 'string' || !rawUrl.trim()) {

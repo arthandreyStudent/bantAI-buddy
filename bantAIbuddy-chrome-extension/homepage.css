@@ -4,7 +4,7 @@
 
 body {
     width: 280px;
-    height: 385px;
+    height: 460px;
     background-color: #DDF4FF;
     box-sizing: border-box;
     display: flex;
@@ -23,7 +23,7 @@ body.fade-out {
 }
 
 img {
-    height: 180px;
+    height: 150px;
 }
 
 .highlight {
@@ -70,7 +70,7 @@ button {
     align-items: center;
     gap: 5%;
     margin: 2% 0%;
-    margin-top: 20px;
+    margin-top: 15px;
 }
 
 .button2 {
@@ -237,10 +237,6 @@ button {
     padding-bottom: 25px;
 }
 
-#middleSection {
-    margin-top: 15px;
-}
-
 .descVer2 {
     color: #413f3f;
 }
@@ -248,9 +244,9 @@ button {
 /* loading spinner */
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(185, 13, 114, 0.1);
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(185, 13, 114, 0.1);
     border-top-color: #d84094;
     border-radius: 50%;
     animation: spin 1s linear infinite, fadeIn 0.2s ease;
@@ -267,7 +263,7 @@ button {
 #spinner-wrapper {
     position: relative;
     min-height: 30px;
-    margin: 20px 0;
+    margin: 5px 0;
     text-align: center;
 }
 

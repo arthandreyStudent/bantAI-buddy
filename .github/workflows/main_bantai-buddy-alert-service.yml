@@ -28,15 +28,33 @@ jobs:
           npm install
           npm run build --if-present
           npm run test --if-present
+        working-directory: ./bantAI-backend
+
+      - name: Validate backend runtime configuration
+        run: npm run validate:config
+        working-directory: ./bantAI-backend
+        env:
+          AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GEMINI_ENDPOINT: ${{ secrets.GEMINI_ENDPOINT }}
+          GEMINI_SAFETY_THRESHOLD: ${{ secrets.GEMINI_SAFETY_THRESHOLD }}
+          ACS_CONNECTION_STRING: ${{ secrets.ACS_CONNECTION_STRING }}
+          ACS_SENDER_ADDRESS: ${{ secrets.ACS_SENDER_ADDRESS }}
+          ALLOWED_EXTENSION_ORIGINS: ${{ secrets.ALLOWED_EXTENSION_ORIGINS }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          GEMINI_SYSTEM_PROMPT: ${{ secrets.GEMINI_SYSTEM_PROMPT }}
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
+        working-directory: ./bantAI-backend
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: release.zip
+          path: ./bantAI-backend/release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -69,4 +87,9 @@ jobs:
           app-name: 'BantAI-Buddy-Alert-Service'
           slot-name: 'Production'
           package: .
+
+      - name: Post-deploy health smoke check
+        run: node scripts/health-check.js
+        env:
+          BACKEND_HEALTHCHECK_URL: ${{ secrets.BACKEND_HEALTHCHECK_URL }}
           

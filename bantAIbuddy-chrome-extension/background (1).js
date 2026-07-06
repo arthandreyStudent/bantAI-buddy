@@ -1,97 +1,103 @@
-// File: background (1).js
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.local.set({
+        severeMessageCount: 0,
+        messagesDetected: 0,
+        messagesBlocked: 0,
+        blockedMessages: {}
+    });
+});
 
-async function callBantAIBackend(text) {
-    const BACKEND_URL = 'https://bantai-backend.vercel.app/api/analyze';
+const DEFAULT_BACKEND_URL = 'https://bantai-backend.vercel.app/api/analyze';
+
+function normalizeBackendUrl(rawUrl) {
+    if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
+        return DEFAULT_BACKEND_URL;
+    }
+
+    const trimmed = rawUrl.trim();
+
+    if (trimmed.endsWith('/api/analyze')) {
+        return trimmed;
+    }
+
+    if (trimmed.endsWith('/')) {
+        return `${trimmed}api/analyze`;
+    }
+
+    return `${trimmed}/api/analyze`;
+}
+
+async function getBackendUrl() {
+    const data = await chrome.storage.local.get(['backendAnalyzeUrl', 'backendBaseUrl']);
+    return normalizeBackendUrl(data.backendAnalyzeUrl || data.backendBaseUrl || DEFAULT_BACKEND_URL);
+}
+
+// This is the ONLY function needed to communicate with your backend.
+async function callBantAIBackend(text, context) {
+    const backendUrl = await getBackendUrl();
+    console.log(`[BantAI] Calling backend: ${backendUrl}`);
+    
+    // Get the parent's email from storage to send to the backend.
     const { storedEmail } = await chrome.storage.local.get(['storedEmail']);
     
-    const response = await fetch(BACKEND_URL, {
+    const response = await fetch(backendUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             messageText: text,
-            parentEmail: storedEmail || null
+            parentEmail: storedEmail || null, // The backend now receives the email
+            context: context || 'main'
         })
     });
 
+    console.log(`[BantAI] Backend response status: ${response.status}`);
+
     if (!response.ok) {
         const errorText = await response.text();
-        if(errorText.includes('content filter') || response.status === 400){
-            return {
-                reason: ['CONTENT_FILTER'],
-                messageId,
-                confidence: 1.0,
-                action: 'BLOCK'
-            };
-        }
         throw new Error(`Backend API error ${response.status}: ${errorText}`);
     }
     
     return await response.json();
 }
 
-//for email alert
-async function notifyUserIfSevere(text, analysis) {
-    if (analysis.severity < 3) {
-        console.log('Message severity below threshold for email notification.');
-        return;
-    }
+const highSeverityMsgThreshold = 10;
 
-    // Get the recipient email address from storage
-    const { storedEmail } = await chrome.storage.sync.get('notifyEmailAddress');
-
-    // If no email address is configured, cannot send email.
-    if (!storedEmail) {
-        console.log('Email notification address not set in extension options.');
-        return;
-    }
-
-    const emailBackendUrl = 'https://bantai-buddy-alert-service-f4gde7ajgxa4hbet.southeastasia-01.azurewebsites.net/send-notification';
-
+async function analyzeMessage(text, messageId, context = 'main', tabId) {
     try {
-        console.log(`Sending email notification request for message ID: ${analysis.messageId} to ${storedEmail}`);
-        const response = await fetch(emailBackendUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                email: storedEmail, // This will be the recipient's email address
-                threatLevel: analysis.severity,
-                reason: analysis.reason,
-                originalText: text
-            })
-        });
-
-        if (response.ok) {
-            console.log('Email notification request sent successfully to backend.');
-        } else {
-            const errorText = await response.text();
-            console.error('Failed to send email notification request to backend:', response.status, errorText);
-        }
-    } catch (error) {
-        console.error('Error making fetch request to email notification backend:', error);
-    }
-}
-
-async function analyzeMessage(text, messageId) {
-    try {
-        const result = await callBantAIBackend(text);
-        console.log(result);
-        const { shouldBlock, analysis } = result;
+        // This single backend call handles both analysis AND email notifications.
+        const result = await callBantAIBackend(text, context);
+        const shouldBlock = Boolean(result?.shouldBlock);
+        const analysis = result?.analysis && typeof result.analysis === 'object'
+            ? result.analysis
+            : {
+                reason: 'No analysis payload returned by backend.',
+                severity: 1,
+                category: 'UNKNOWN'
+            };
         
-        if (shouldBlock) {
-            await updateCounters(true);
+        if (shouldBlock && context === 'main') {
             await storeBlockedMessage(messageId, text, analysis);
-        } else {
-            await updateCounters(false);
-        }
+                // The call to notifyUserIfSevere is removed because the backend handles it.
+            if (analysis.severity >= 3) {
+                const { severeMessageCount } = await chrome.storage.local.get(['severeMessageCount']);
+                const newCount = (severeMessageCount || 0) + 1;
+
+                console.log(`High severity message detected. New count: ${newCount}`);
+                await chrome.storage.local.set({ severeMessageCount: newCount });
+
+                if (newCount >= highSeverityMsgThreshold) {
+                    console.log('Severe message threshold reached. Triggering lockdown.');
+                    await triggerLockdown(tabId);
+                }
+            }
+        } 
         
         return {
+            shouldBlock,
             reason: [analysis.reason],
             messageId,
-            severity: mapSeverity(analysis.child_risk),
-            details: analysis,
-            shouldBlock: shouldBlock
+            severity: mapSeverity(analysis.severity),
+            details: analysis
         };
         
     } catch (error) {
@@ -105,25 +111,21 @@ async function analyzeMessage(text, messageId) {
     }
 }
 
-function mapSeverity(childRisk) {
-    const map = { 5: 'CRITICAL', 4: 'HIGH', 3: 'MEDIUM', 2: 'LOW', 1: 'NONE' };
-    return map[childRisk] || 'MEDIUM';
+async function triggerLockdown(tabId) {
+    chrome.tabs.sendMessage(tabId, { action: 'showLockdownPopup' });
+
+    await chrome.storage.local.set({ severeMessageCount: 0 });
+
+    setTimeout(() => {
+        console.log(`Closing tab ${tabId} due to lockdown.`);
+        chrome.tabs.remove(tabId);
+    }, 5000);
 }
 
-async function updateCounters(blocked) {
-    const data = await chrome.storage.local.get(['messagesDetected', 'messagesBlocked']);
-    const newDetected = (data.messagesDetected || 0) + 1;
-    const newBlocked = (data.messagesBlocked || 0) + (blocked ? 1 : 0);
-    
-    await chrome.storage.local.set({
-        messagesDetected: newDetected,
-        messagesBlocked: newBlocked
-    });
-    
-    if (newBlocked > 0) {
-        chrome.action.setBadgeText({ text: newBlocked.toString() });
-        chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-    }
+// Map severity based on the number from the analysis, not a string.
+function mapSeverity(severityNumber) {
+    const map = { 5: 'CRITICAL', 4: 'HIGH', 3: 'MEDIUM', 2: 'LOW', 1: 'NONE' };
+    return map[severityNumber] || 'MEDIUM';
 }
 
 async function storeBlockedMessage(messageId, text, analysis) {
@@ -153,7 +155,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     if (request.action === 'analyzeMessage') {
         (async () => {
             try {
-                const result = await analyzeMessage(request.text, request.messageId);
+                const result = await analyzeMessage(request.text, request.messageId, request.context || 'main', _sender.tab.id);
                 sendResponse(result);
             } catch (error) {
                 console.error("Error in onMessage listener:", error);
@@ -161,5 +163,23 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
             }
         })();
         return true;
+    }
+    else if (request.action === 'reloadTabAfterDelay') {
+        console.log("Background script received reload request.");
+
+        // Automatically reload the active tab after submitting the email
+        setTimeout(() => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs[0] && tabs[0].id) {
+                    const url = tabs[0].url;
+                    if (url && (url.includes('messenger.com') || url.includes('facebook.com'))) {
+                        console.log(`Reloading tab: ${tabs[0].id} with URL: ${url}`);
+                        chrome.tabs.reload(tabs[0].id);
+                    } else {
+                        console.log('Active tab is not Messenger or Facebook, not reloading.');  
+                    }
+                }
+            });
+        }, 4000);
     }
 });

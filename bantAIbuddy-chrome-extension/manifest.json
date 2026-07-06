@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BantAI Buddy",
-  "version": "0.1",
+  "version": "1.0.0",
   "description": "AI-powered protection for children that analyzes your Messenger locally to detect potentially harmful content, without sending any data outside your browser.",
   "permissions": [
     "storage",
@@ -13,7 +13,9 @@
     "https://www.messenger.com/*",
     "https://messenger.com/*",
     "https://www.facebook.com/*",
-    "https://*.openai.azure.com/*"
+    "https://www.instagram.com/*",
+    "https://*.openai.azure.com/*",
+    "https://bantai-backend.vercel.app/*"
   ],
   "background": {
     "service_worker": "background (1).js"
@@ -23,7 +25,9 @@
       "matches": [
         "https://www.messenger.com/*",
         "https://messenger.com/*",
-        "https://www.facebook.com/*"
+        "https://www.facebook.com/*",
+        "https://*.facebook.com/*",
+        "https://www.instagram.com/*"
       ],
       "js": ["content-script (1).js"],
       "run_at": "document_start"
@@ -48,7 +52,8 @@
       "matches": [
         "https://www.messenger.com/*",
         "https://messenger.com/*",
-        "https://www.facebook.com/*"
+        "https://www.facebook.com/*",
+        "https://*.facebook.com/*"
       ]
     }
   ],

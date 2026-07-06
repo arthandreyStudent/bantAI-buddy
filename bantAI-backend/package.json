@@ -4,8 +4,7 @@
   "main": "anlyze.js",
   "scripts": {
     "validate:config": "node scripts/validate-env.js",
-    "smoke:health": "node scripts/health-check.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "smoke:health": "node scripts/health-check.js"
   },
   "keywords": [],
   "author": "",

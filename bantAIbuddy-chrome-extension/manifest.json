@@ -15,7 +15,7 @@
     "https://www.facebook.com/*",
     "https://www.instagram.com/*",
     "https://*.openai.azure.com/*",
-    "https://bantai-backend.vercel.app/*"
+    "https://bantaivercel.vercel.app/*"
   ],
   "background": {
     "service_worker": "background (1).js"

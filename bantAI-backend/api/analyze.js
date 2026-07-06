@@ -37,6 +37,65 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+const DEFAULT_SYSTEM_PROMPT = `You are BantAI Buddy, a child-safety classifier for chat messages on Messenger and Instagram. Your audience is children ages 8–15, especially communities in Cebu, Philippines. You understand English, Tagalog, Cebuano, Taglish, and Conyo (mixed casual Filipino-English).
+
+CLASSIFICATION RULES
+- Analyze the message carefully before deciding. Do not flag harmless or ambiguous messages as inappropriate.
+- Watch for: flirtation, sexual content, profanity, insults, hate speech, racism, predatory grooming, violence, cyberbullying, misinformation, and evasion tactics (number/symbol substitutions, deliberate misspellings, leetspeak).
+- Use category SAFE when the message is appropriate for children.
+- Set action to BLOCK only when the message is genuinely inappropriate for ages 8–15. Use ALLOW for friendly, benign, or unclear messages.
+- severity scale: 1 = none/safe, 2 = mild concern, 3 = moderate, 4 = high, 5 = critical. Match severity to action (BLOCK usually means severity 2 or higher).
+
+REASON FIELD (shown to the child in a popup)
+- Write exactly TWO short sentences, friendly and age-appropriate. Open with a warm greeting (e.g. "Hey there!" / "Uy, friend!" / "Oy, bai!").
+- Write the reason in the same language as the message (English, Tagalog, or Cebuano). For Cebuano, use casual everyday Bisaya, not formal textbook Cebuano.
+- If you mention inappropriate words, censor them with asterisks (e.g. tangina → t******).
+- Be creative and encouraging, not scary or preachy.
+
+OTHER FIELDS
+- language: detected primary language (English, Tagalog, or Cebuano).
+- confidence: your confidence from 0.0 to 1.0.
+- slang_detected: comma-separated slang or coded terms found, or empty string if none.
+
+OUTPUT
+- Return ONLY a JSON object matching the enforced schema. No markdown, no code fences, no extra text.`;
+
+const ANALYSIS_RESPONSE_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+        action: {
+            type: 'STRING',
+            enum: ['ALLOW', 'BLOCK']
+        },
+        category: {
+            type: 'STRING',
+            enum: [
+                'SAFE',
+                'INSULT',
+                'TOXICITY',
+                'SEVERE_TOXICITY',
+                'SEXUALLY_EXPLICIT',
+                'FLIRTATION',
+                'PROFANITY',
+                'PREDATORY',
+                'VIOLENCE',
+                'MISINFORMATION',
+                'HATE_SPEECH',
+                'CYBERBULLYING'
+            ]
+        },
+        reason: { type: 'STRING' },
+        severity: { type: 'INTEGER' },
+        language: {
+            type: 'STRING',
+            enum: ['English', 'Tagalog', 'Cebuano']
+        },
+        confidence: { type: 'NUMBER' },
+        slang_detected: { type: 'STRING' }
+    },
+    required: ['action', 'category', 'reason', 'severity', 'language']
+};
+
 function extractJsonPayload(content) {
     if (typeof content !== 'string') {
         return '';
@@ -47,7 +106,24 @@ function extractJsonPayload(content) {
         return fenced[1].trim();
     }
 
-    return content.trim();
+    const trimmed = content.trim();
+    const objectStart = trimmed.indexOf('{');
+    const objectEnd = trimmed.lastIndexOf('}');
+
+    if (objectStart !== -1 && objectEnd > objectStart) {
+        return trimmed.slice(objectStart, objectEnd + 1);
+    }
+
+    return trimmed;
+}
+
+function parseAnalysisPayload(payload) {
+    try {
+        return JSON.parse(payload);
+    } catch (error) {
+        console.error('Failed to parse model JSON. Raw content (truncated):', payload.slice(0, 800));
+        throw error;
+    }
 }
 
 function normalizeAnalysis(raw) {
@@ -57,17 +133,33 @@ function normalizeAnalysis(raw) {
         ? Math.max(1, Math.min(5, Math.round(severityNum)))
         : 1;
 
-    const action = String(source.action || '').toUpperCase() === 'BLOCK' || severity >= 2 ? 'BLOCK' : 'ALLOW';
+    const modelAction = String(source.action || '').toUpperCase();
+    const action = modelAction === 'BLOCK' || severity >= 2 ? 'BLOCK' : 'ALLOW';
     const category = String(source.category || 'UNKNOWN').trim() || 'UNKNOWN';
     const reason = String(source.reason || 'No reason provided by model.').trim() || 'No reason provided by model.';
 
-    return {
+    const analysis = {
         action,
         category,
         reason,
         severity,
         child_risk: severity >= 5 ? 'CRITICAL' : severity >= 4 ? 'HIGH' : severity >= 3 ? 'MEDIUM' : severity >= 2 ? 'LOW' : 'NONE'
     };
+
+    if (source.language) {
+        analysis.language = String(source.language).trim();
+    }
+
+    const confidence = Number(source.confidence);
+    if (Number.isFinite(confidence)) {
+        analysis.confidence = Math.max(0, Math.min(1, confidence));
+    }
+
+    if (source.slang_detected !== undefined && source.slang_detected !== null) {
+        analysis.slang_detected = String(source.slang_detected).trim();
+    }
+
+    return analysis;
 }
 
 const config = {
@@ -79,7 +171,7 @@ const config = {
         senderAddress: getEnv('ACS_SENDER_ADDRESS')
     },
     model: {
-        systemPrompt: getEnv('GEMINI_SYSTEM_PROMPT') || 'You are a child safety classifier. Return JSON only.',
+        systemPrompt: getEnv('GEMINI_SYSTEM_PROMPT') || DEFAULT_SYSTEM_PROMPT,
         geminiApiKey: getEnv('GEMINI_API_KEY', 'GOOGLE_API_KEY'),
         geminiModel: getEnv('GEMINI_MODEL') || 'gemini-2.5-flash',
         geminiEndpoint: getEnv('GEMINI_ENDPOINT') || 'https://generativelanguage.googleapis.com/v1beta',
@@ -120,11 +212,7 @@ const emailClient = config.email.connectionString && config.email.senderAddress
     : null;
 
 function buildUserPrompt(messageText) {
-    return [
-        `Analyze this user message for child safety risk: "${messageText}".`,
-        'Return valid JSON only with this exact schema:',
-        '{"action":"ALLOW|BLOCK","category":"string","reason":"string","severity":1-5}'
-    ].join(' ');
+    return `Analyze this chat message for child safety (ages 8–15): "${messageText}"`;
 }
 
 async function analyzeWithGemini(messageText) {
@@ -147,10 +235,11 @@ async function analyzeWithGemini(messageText) {
                 }
             ],
             generationConfig: {
-                temperature: 0.3,
+                temperature: 0,
                 topP: 0.95,
                 maxOutputTokens: 800,
-                responseMimeType: 'application/json'
+                responseMimeType: 'application/json',
+                responseSchema: ANALYSIS_RESPONSE_SCHEMA
             },
             safetySettings: [
                 {
@@ -236,7 +325,7 @@ app.post('/api/analyze', async (req, res) => {
             throw new Error('Model returned empty content.');
         }
 
-        const analysis = normalizeAnalysis(JSON.parse(payload));
+        const analysis = normalizeAnalysis(parseAnalysisPayload(payload));
 
         const shouldBlock = analysis.action === 'BLOCK' || analysis.severity >= 2;
 
@@ -315,13 +404,13 @@ app.post('/api/analyze', async (req, res) => {
             });
         } else if (error instanceof SyntaxError) {
             res.status(200).json({
-                shouldBlock: true,
+                shouldBlock: false,
                 analysis: {
-                    action: 'BLOCK',
+                    action: 'ALLOW',
                     category: 'MODEL_OUTPUT_ERROR',
-                    reason: 'Model response could not be parsed safely. Message was blocked by fallback policy.',
-                    severity: 2,
-                    child_risk: 'LOW'
+                    reason: 'Hey there! We could not fully check this message right now, so we are letting it through. If something feels off, please tell a trusted adult.',
+                    severity: 1,
+                    child_risk: 'NONE'
                 }
             });
         } else {

@@ -119,7 +119,8 @@ class MessengerGuardWithBlur {
     }
     
     scanForNewMessages(container) {
-        const messageSelectors = ['[data-testid="message-container"]', '[role="gridcell"] div[dir="auto"]'];
+        // Updated the message selectors that work for the current Messenger DOM structure. Adjust as necessary if the structure changes.
+        const messageSelectors = ['[dir="auto"] div[class*="html-div xexx8yu xyri2b x18d9i69 x1c1uobl x1gslohp x14z9mp x12nagc x1lziwak x1yc453h x126k92a xyk4ms5"]'];
         
         messageSelectors.forEach(selector => {
             container.querySelectorAll(selector).forEach(element => {

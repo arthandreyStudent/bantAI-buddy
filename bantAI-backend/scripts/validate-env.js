@@ -1,55 +1,29 @@
-const GEMINI_REQUIRED_GROUPS = [
-    ['GEMINI_API_KEY', 'GOOGLE_API_KEY']
-];
+// File: bantAI-backend/scripts/validate-env.js
 
-const GEMINI_ALLOWED_SAFETY_THRESHOLDS = new Set([
-    'OFF',
-    'BLOCK_NONE',
-    'BLOCK_ONLY_HIGH',
-    'BLOCK_MEDIUM_AND_ABOVE',
-    'BLOCK_LOW_AND_ABOVE'
-]);
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
 function hasValue(name) {
     const value = process.env[name];
     return typeof value === 'string' && value.trim().length > 0;
 }
 
-function firstAvailable(names) {
-    return names.find(hasValue);
-}
-
-function printGroupStatus(names) {
-    const selected = firstAvailable(names);
-    if (selected) {
-        console.log(`OK: ${selected}`);
-    } else {
-        console.error(`MISSING: one of [${names.join(', ')}]`);
-    }
-    return Boolean(selected);
-}
-
 function validateModelConfig() {
-    const requiredOk = GEMINI_REQUIRED_GROUPS.every(printGroupStatus);
-    if (hasValue('GEMINI_MODEL')) {
-        console.log('OK: GEMINI_MODEL');
+    let isValid = true;
+
+    if (hasValue('LOCAL_LLM_ENDPOINT')) {
+        console.log(`OK: LOCAL_LLM_ENDPOINT -> ${process.env.LOCAL_LLM_ENDPOINT}`);
     } else {
-        console.warn('WARN: GEMINI_MODEL not set. Backend default model gemini-2.5-flash will be used.');
+        console.warn('WARN: LOCAL_LLM_ENDPOINT not set. Defaulting to http://localhost:8080/v1/chat/completions');
     }
 
-    if (hasValue('GEMINI_SAFETY_THRESHOLD')) {
-        const threshold = String(process.env.GEMINI_SAFETY_THRESHOLD).trim().toUpperCase();
-        if (GEMINI_ALLOWED_SAFETY_THRESHOLDS.has(threshold)) {
-            console.log('OK: GEMINI_SAFETY_THRESHOLD');
-            return requiredOk;
-        }
-
-        console.error('MISSING: GEMINI_SAFETY_THRESHOLD must be one of OFF, BLOCK_NONE, BLOCK_ONLY_HIGH, BLOCK_MEDIUM_AND_ABOVE, BLOCK_LOW_AND_ABOVE.');
-        return false;
+    if (hasValue('LOCAL_LLM_MODEL_NAME')) {
+        console.log(`OK: LOCAL_LLM_MODEL_NAME -> ${process.env.LOCAL_LLM_MODEL_NAME}`);
+    } else {
+        console.warn('WARN: LOCAL_LLM_MODEL_NAME not set. Defaulting to Qwen3-4B');
     }
 
-    console.warn('WARN: GEMINI_SAFETY_THRESHOLD not set. Backend default BLOCK_MEDIUM_AND_ABOVE will be used.');
-    return requiredOk;
+    return isValid;
 }
 
 function validateEmailConfig() {
@@ -57,39 +31,30 @@ function validateEmailConfig() {
     const hasSender = hasValue('ACS_SENDER_ADDRESS');
 
     if (hasConnection !== hasSender) {
-        console.error('MISSING: ACS_CONNECTION_STRING and ACS_SENDER_ADDRESS must be provided together.');
+        console.error('ERROR: ACS_CONNECTION_STRING and ACS_SENDER_ADDRESS must be provided together.');
         return false;
     }
 
     if (hasConnection && hasSender) {
-        console.log('OK: Email notifications configured.');
+        console.log('OK: Parental Email notifications configured via Azure.');
     } else {
-        console.warn('WARN: Email notifications disabled (ACS vars not set).');
+        console.warn('WARN: Parental email alerts are disabled (ACS variables missing).');
     }
 
     return true;
 }
 
-function validateOptionalHints() {
-    if (!hasValue('ALLOWED_EXTENSION_ORIGINS') && !hasValue('ALLOWED_ORIGINS')) {
-        console.warn('WARN: ALLOWED_EXTENSION_ORIGINS/ALLOWED_ORIGINS not set. Backend default allowlist will be used.');
-    }
+console.log('Validating BantAI Backend local environment contract...');
+console.log('Target Core: llama.cpp Multi-Intercept Pipeline');
+console.log('--------------------------------------------------');
 
-    if (!hasValue('GEMINI_SYSTEM_PROMPT')) {
-        console.warn('WARN: No custom system prompt configured. Backend default prompt will be used.');
-    }
-}
-
-console.log('Validating backend runtime environment contract...');
-console.log('AI provider: gemini');
-
-const requiredOk = validateModelConfig();
+const coreOk = validateModelConfig();
 const emailOk = validateEmailConfig();
-validateOptionalHints();
 
-if (!requiredOk || !emailOk) {
+console.log('--------------------------------------------------');
+if (!coreOk || !emailOk) {
     process.exitCode = 1;
     console.error('Environment validation failed.');
 } else {
-    console.log('Environment validation passed.');
+    console.log('Environment validation passed. Ready for runtime.');
 }

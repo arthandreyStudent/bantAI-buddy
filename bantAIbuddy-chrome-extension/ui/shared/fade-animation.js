@@ -1,3 +1,5 @@
+// File: bantAIbuddy-chrome-extension/ui/shared/fade-animation.js
+
 document.addEventListener('DOMContentLoaded', () => {
   requestAnimationFrame(() => {
     document.body.classList.add('fade-in');

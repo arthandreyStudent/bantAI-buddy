@@ -1,10 +1,11 @@
 {
   "name": "bantai-backend",
   "version": "1.0.0",
-  "main": "anlyze.js",
+  "main": "analyze.js",
   "scripts": {
     "validate:config": "node scripts/validate-env.js",
-    "smoke:health": "node scripts/health-check.js"
+    "smoke:health": "node scripts/health-check.js",
+    "test:safety-regression": "python scripts/run-safety-regression.py"
   },
   "keywords": [],
   "author": "",

@@ -18,7 +18,7 @@
     "https://bantaivercel.vercel.app/*"
   ],
   "background": {
-    "service_worker": "background (1).js"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
@@ -29,12 +29,22 @@
         "https://*.facebook.com/*",
         "https://www.instagram.com/*"
       ],
-      "js": ["content-script (1).js"],
+      "js": [
+        "content-scripts/messenger-dom.js",
+        "content-scripts/application-observer.js",
+        "content-scripts/conversation-observer.js",
+        "content-scripts/cache-manager.js",
+        "content-scripts/message-processor.js",
+        "content-scripts/blur-manager.js",
+        "content-scripts/popup-manager.js",
+        "content-scripts/content-script.js"
+      ],
+      "css": ["assets/guard-styles.css"],
       "run_at": "document_start"
     }
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "ui/view/popup.html",
     "default_title": "BantAI Buddy",
     "default_icon": {
       "16": "assets/final_icon-16.png",
@@ -48,7 +58,18 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/uhoh.png"],
+      "resources": [
+        "assets/uhoh.png", 
+        "assets/final_icon.png", 
+        "assets/final_icon-16.png", 
+        "assets/final_icon-32.png", 
+        "assets/final_icon-48.png", 
+        "assets/final_icon-128.png", 
+        "assets/bAI.png", 
+        "assets/bAI_2.png", 
+        "assets/bAI_3.png", 
+        "assets/bAI_4.png"
+      ],
       "matches": [
         "https://www.messenger.com/*",
         "https://messenger.com/*",
